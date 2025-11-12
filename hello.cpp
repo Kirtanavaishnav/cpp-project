@@ -11,16 +11,19 @@ protected:
 public:
     Customer() { name = "Unknown"; phone = 0; }
     Customer(string n, long p) { name = n; phone = p; }
+
     virtual void getData() {
         cout << "Enter Name: ";
         cin >> name;
         cout << "Enter Phone: ";
         cin >> phone;
     }
+
     virtual void showData() const {
         cout << "Name: " << name << " | Phone: " << phone;
     }
-    virtual ~Customer() { } // Virtual destructor
+
+    virtual ~Customer() { }
 };
 
 
@@ -33,6 +36,7 @@ public:
         tableNo = t;
         capacity = c;
     }
+
     void showTable() const {
         cout << "Table No: " << tableNo << " | Capacity: " << capacity;
     }
@@ -43,10 +47,12 @@ class VIPCustomer : public Customer {
     int discount;
 public:
     VIPCustomer() : discount(10) {}
+
     void getData() {
         Customer::getData();
         cout << "VIP discount is 10%\n";
     }
+
     void showData() const {
         cout << "VIP Name: " << name << " | Phone: " << phone
              << " | Discount: " << discount << "%";
@@ -62,12 +68,29 @@ public:
 
     void makeReservation() {
         getData();
-        cout << "Enter Table Number: ";
+
+        cout << "Enter Table Number (1-50): ";
         cin >> tableNo;
+
+        try {
+            if (tableNo <= 0 || tableNo > 50)
+                throw tableNo;  // throw invalid table number
+        }
+        catch (int t) {
+            cout << " Invalid Table Number: " << t 
+                 << " (Tables available: 1–50 only)\n";
+            return; // stop reservation
+        }
+
         cout << "Enter Date (dd/mm/yyyy): ";
         cin >> date;
 
         ofstream fout("reservations.txt", ios::app);
+        if (!fout) {
+            cerr << " File could not be opened.\n";
+            return;
+        }
+
         fout << name << " " << phone << " " << tableNo << " " << date << endl;
         fout.close();
         cout << "\n Reservation saved successfully!\n";
@@ -80,16 +103,6 @@ public:
 
     static void totalReservations() {
         cout << "\nTotal Reservations (this session): " << count << endl;
-    }
-
-    
-    Reservation operator+(Reservation r2) {
-        Reservation temp;
-        temp.name = name + "_" + r2.name;
-        temp.phone = phone + r2.phone;
-        temp.tableNo = tableNo + r2.tableNo;
-        temp.date = "Combined";
-        return temp;
     }
 
     ~Reservation() { }
@@ -108,119 +121,96 @@ class FoodMenu : public BaseMenu {
 public:
     void displayMenu() {
         cout << "\n---- MENU ----\n";
-        cout << "1. Paneer Butter Masala - 250\n";
-        cout << "2. Veg Biryani - 180\n";
-        cout << "3. Dal Tadka - 150\n";
-        cout << "4. Roti - 20\n";
+        cout << "1. Paneer Butter Masala - ₹250\n";
+        cout << "2. Veg Biryani - ₹180\n";
+        cout << "3. Dal Tadka - ₹150\n";
+        cout << "4. Roti - ₹20\n";
     }
 };
-
-
-class Bill {
-    float amount;
-    friend void showBill(Bill);
-public:
-    Bill(float a = 0) { amount = a; }
-};
-void showBill(Bill b) {
-    cout << "\nTotal Bill Amount: ₹" << b.amount << endl;
-}
 
 
 template <class T>
-class Manager {
-    T* data;
-    int size;
+class Billing {
+    T amount;
 public:
-    Manager(int s) {
-        size = s;
-        data = new T[size];
+    Billing(T a = 0) { amount = a; }
+
+    Billing operator+(Billing b) {
+        Billing temp;
+        temp.amount = amount + b.amount;
+        return temp;
     }
-    void setItem(int i, T val) {
-        if (i >= 0 && i < size)
-            data[i] = val;
+
+    void showBill() const {
+        cout << "\nTotal Bill Amount: ₹" << amount << endl;
     }
-    void showItems() const {
-        for (int i = 0; i < size; i++)
-            cout << data[i] << " ";
-        cout << endl;
-    }
-    ~Manager() { delete[] data; }
 };
 
 
 int main() {
     int ch;
-    Reservation r1, r2, r3;
+    Reservation r1;
     VIPCustomer v;
     FoodMenu menu;
-    Bill b(580.75);
-    Manager<string> manager(3);
 
-    cout << "==== RESTAURANT RESERVATION SYSTEM ====\n";
+    Billing<float> bill1(250.50), bill2(330.25), totalBill;
 
+    cout << " RESTAURANT RESERVATION SYSTEM \n";
 
     do {
         cout << "\n1. Make Reservation";
         cout << "\n2. View Reservations";
-        cout << "\n3. Combine Two Reservations (+ Operator)";
-        cout << "\n4. VIP Customer";
-        cout << "\n5. Display Menu (Abstract Class)";
-        cout << "\n6. Show Bill (Friend Function)";
-        cout << "\n7. Use Template Manager";
-        cout << "\n8. Exit\nEnter choice: ";
+        cout << "\n3. VIP Customer";
+        cout << "\n4. Display Menu (Abstract Class)";
+        cout << "\n5. Calculate Total Bill (Template + Operator Overload)";
+        cout << "\n6. Exit\nEnter choice: ";
         cin >> ch;
 
-        if (ch == 1)
+        switch (ch) {
+        case 1:
             r1.makeReservation();
+            break;
 
-        else if (ch == 2) {
+        case 2: {
             ifstream fin("reservations.txt");
+            if (!fin) {
+                cerr << " Unable to open reservations file.\n";
+                break;
+            }
             string n, d; long p; int t;
-            cout << "\n Reservation List:\n";
+            cout << "\nReservation List:\n";
             while (fin >> n >> p >> t >> d)
                 cout << "Name: " << n << " | Phone: " << p
                      << " | Table: " << t << " | Date: " << d << endl;
             fin.close();
             Reservation::totalReservations();
+            break;
         }
 
-        else if (ch == 3) {
-            cout << "\nEnter first reservation:\n";
-            r1.makeReservation();
-            cout << "\nEnter second reservation:\n";
-            r2.makeReservation();
-            r3 = r1 + r2; 
-            cout << "\nCombined Reservation:\n";
-            r3.display();
-        }
-
-        else if (ch == 4) {
+        case 3:
             v.getData();
             v.showData();
             cout << endl;
-        }
+            break;
 
-        else if (ch == 5)
+        case 4:
             menu.displayMenu();
+            break;
 
-        else if (ch == 6)
-            showBill(b);
+        case 5:
+            totalBill = bill1 + bill2;
+            totalBill.showBill();
+            break;
 
-        else if (ch == 7) {
-            manager.setItem(0, "Manager1");
-            manager.setItem(1, "Manager2");
-            manager.setItem(2, "Manager3");
-            cout << "\nRestaurant Managers: ";
-            manager.showItems();
+        case 6:
+            cout << "\nGoodbye!\n";
+            break;
+
+        default:
+            cout << "\nInvalid choice!\n";
         }
 
-        else if (ch == 8)
-            cout << "\nGoodbye!\n";
-        else
-            cout << "\nInvalid choice!\n";
-
-    } while (ch != 8);
+    } while (ch != 6);
 
     return 0;
 }
